@@ -24,7 +24,7 @@ def load_data_from_disk(files):
 
 def build_input_pipeline(dataset_dir):
     data_file_pat = os.path.normpath(os.path.join(dataset_dir, r"**/*.pkl"))
-    data_files = glob.glob(data_file_pat, recursive=True)
+    data_files = sorted(glob.glob(data_file_pat, recursive=True))  # always return the files in the same order
     dataset = tf.data.Dataset.from_generator(
         load_data_from_disk,
         output_signature=(
@@ -190,24 +190,22 @@ if __name__ == "__main__":
                                                                        train_pot_dir=train_pot_dir,
                                                                        val_pot_dir=val_pot_dir)
 
-    train_data = build_input_pipeline(train_dataset_dir)
-    train_data = train_data.shuffle(buffer_size=512)
-    train_data = train_data.apply(tf.data.experimental.dense_to_ragged_batch(batch_size=batch_size))
-    train_data_iter = iter(train_data)
+    train_dataset = build_input_pipeline(train_dataset_dir)
+    train_dataset = train_dataset.shuffle(buffer_size=512)
+    train_dataset = train_dataset.apply(tf.data.experimental.dense_to_ragged_batch(batch_size=batch_size))
 
-    val_data = build_input_pipeline(val_dataset_dir)
-    val_data = val_data.apply(tf.data.experimental.dense_to_ragged_batch(batch_size=batch_size))
-    val_data_iter = iter(val_data)
+    val_dataset = build_input_pipeline(val_dataset_dir)
+    val_dataset = val_dataset.apply(tf.data.experimental.dense_to_ragged_batch(batch_size=batch_size))
 
     model, callbacks = make_train_model(checkpoint_dir=checkpoint_dir,
                                         tensorboard_dir=tensorboard_dir,
                                         backup_dir=backup_dir)
 
-    # collect the state of the iterators automatically
-    model._train_data_iter = train_data_iter
-    model._val_data_iter = val_data_iter
+    # collect the state of the datasets automatically
+    model._train_dataset = train_dataset
+    model._val_dataset = val_dataset
 
     model.summary()
 
-    model.fit(train_data_iter, epochs=epochs, validation_data=val_data_iter, callbacks=callbacks)
+    model.fit(train_dataset, epochs=epochs, validation_data=val_dataset, callbacks=callbacks)
 

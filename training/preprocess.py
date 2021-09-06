@@ -310,7 +310,7 @@ def make_dataset_gb2312_level1(dataset_dir, train_pot_dir=None, val_pot_dir=None
     def make_data(to_fn, from_dir):
         """generate the training and test dataset."""
         pot_pattern = os.path.normpath(os.path.join(from_dir, r"**/*.pot"))
-        pots = glob.glob(pot_pattern, recursive=True)
+        pots = sorted(glob.glob(pot_pattern, recursive=True))  # make sure that the dataset creation is idempotent
         if not pots:
             print("No POT file(s) found in '{}'!".format(from_dir))
             return
