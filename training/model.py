@@ -88,10 +88,10 @@ def _build_model(training=True):
     return model
 
 
-def make_train_model(checkpoint_dir, tensorboard_dir):
+def make_train_model(checkpoint_dir, tensorboard_dir, backup_dir):
 
     def _setup_log_dirs():
-        for d in [checkpoint_dir, tensorboard_dir]:
+        for d in [checkpoint_dir, tensorboard_dir, backup_dir]:
             if not os.path.exists(d):
                 os.makedirs(d, exist_ok=True)
 
@@ -105,7 +105,14 @@ def make_train_model(checkpoint_dir, tensorboard_dir):
 
     latest_checkpoint = _get_saved_checkpoint()
 
-    def _build_callbacks():
+    # setup the training (compiled) model
+    model = _build_model(training=True)
+
+    model.compile(optimizer=optimizers.RMSprop(),
+                  loss=losses.SparseCategoricalCrossentropy(from_logits=True),
+                  metrics=['accuracy'])
+
+    def _build_callbacks(model):
 
         ckpt_file = latest_checkpoint if latest_checkpoint else os.path.join(checkpoint_dir, "weights.hdf5")
         ckpt_cb = keras.callbacks.ModelCheckpoint(filepath=ckpt_file, save_weights_only=True,
@@ -118,21 +125,18 @@ def make_train_model(checkpoint_dir, tensorboard_dir):
         earlystop_cb = keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=1e-2,
                                                      patience=2, verbose=0)
 
-        callbacks = [ckpt_cb, tensorboard_cb, earlystop_cb]
+        backup_cb = keras.callbacks.experimental.BackupAndRestore(backup_dir=backup_dir)
+
+        # let the model automatically track these callbacks
+        model._ckpt_cb = ckpt_cb
+        model._tensorboard_cb = tensorboard_cb
+        model._earlystop_cb = earlystop_cb
+
+        callbacks = [ckpt_cb, tensorboard_cb, earlystop_cb, backup_cb]
 
         return callbacks
 
-    callbacks = _build_callbacks()
-
-    # setup the training (compiled) model
-    model = _build_model(training=True)
-
-    if latest_checkpoint:
-        model.load_weights(latest_checkpoint)
-
-    model.compile(optimizer=optimizers.RMSprop(),
-                  loss=losses.SparseCategoricalCrossentropy(from_logits=True),
-                  metrics=['accuracy'])
+    callbacks = _build_callbacks(model)
 
     return model, callbacks
 
@@ -159,6 +163,8 @@ if __name__ == "__main__":
                             help='directory in which to save the model checkpoints; relative to `working_dir`')
         parser.add_argument('-T', '--tensorboard-dir', default='tb_logs', dest='tensorboard_dir',
                             help='directory in which to save the tensorboard logs; relative to `working_dir`')
+        parser.add_argument('-R', '--backup-dir', default='backup_n_restore', dest='backup_dir',
+                            help='directory in which to save the BackupAndRestore logs; relative to `working_dir`')
         parser.add_argument('-E', '--epochs', default=15000, dest='epochs', type=int,
                             help='epochs to run for training, though early stopping may occur')
         parser.add_argument('-B', '--batch-size', default=32, dest='batch_size', type=int,
@@ -175,6 +181,7 @@ if __name__ == "__main__":
     dataset_dir = os.path.join(working_dir, args.dataset_dir)
     checkpoint_dir = os.path.join(working_dir, args.checkpoint_dir)
     tensorboard_dir = os.path.join(working_dir, args.tensorboard_dir)
+    backup_dir = os.path.join(working_dir, args.backup_dir)
 
     epochs = args.epochs
     batch_size = args.batch_size
@@ -186,13 +193,21 @@ if __name__ == "__main__":
     train_data = build_input_pipeline(train_dataset_dir)
     train_data = train_data.shuffle(buffer_size=512)
     train_data = train_data.apply(tf.data.experimental.dense_to_ragged_batch(batch_size=batch_size))
+    train_data_iter = iter(train_data)
 
     val_data = build_input_pipeline(val_dataset_dir)
     val_data = val_data.apply(tf.data.experimental.dense_to_ragged_batch(batch_size=batch_size))
+    val_data_iter = iter(val_data)
 
-    model, callbacks = make_train_model(checkpoint_dir=checkpoint_dir, tensorboard_dir=tensorboard_dir)
+    model, callbacks = make_train_model(checkpoint_dir=checkpoint_dir,
+                                        tensorboard_dir=tensorboard_dir,
+                                        backup_dir=backup_dir)
+
+    # collect the state of the iterators automatically
+    model._train_data_iter = train_data_iter
+    model._val_data_iter = val_data_iter
 
     model.summary()
 
-    model.fit(train_data, epochs=epochs, validation_data=val_data, callbacks=callbacks)
+    model.fit(train_data_iter, epochs=epochs, validation_data=val_data_iter, callbacks=callbacks)
 
