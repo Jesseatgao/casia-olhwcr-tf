@@ -169,6 +169,8 @@ if __name__ == "__main__":
                             help='epochs to run for training, though early stopping may occur')
         parser.add_argument('-B', '--batch-size', default=32, dest='batch_size', type=int,
                             help='mini batch size for training the model')
+        parser.add_argument('-V', '--verbose', default=2, dest='verbose', choices=[0, 1, 2],
+                            help='verbosity mode. 0 = silent, 1 = progress bar, 2 = one line per epoch')
 
         return parser
 
@@ -185,6 +187,7 @@ if __name__ == "__main__":
 
     epochs = args.epochs
     batch_size = args.batch_size
+    verbose = args.verbose
 
     train_dataset_dir, val_dataset_dir, _ = make_dataset_gb2312_level1(dataset_dir,
                                                                        train_pot_dir=train_pot_dir,
@@ -207,5 +210,5 @@ if __name__ == "__main__":
 
     model.summary()
 
-    model.fit(train_dataset, epochs=epochs, validation_data=val_dataset, callbacks=callbacks)
+    model.fit(train_dataset, epochs=epochs, validation_data=val_dataset, callbacks=callbacks, verbose=verbose)
 

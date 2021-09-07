@@ -15,8 +15,14 @@ ARG tensorboard_dir=tb_logs
 ARG backup_dir=backup_n_restore
 
 # FIXME: experiment
-ARG epochs=4
+ARG epochs=2
 
+# POT files:
+#   http://www.nlpr.ia.ac.cn/databases/download/feature_data/OLHWDB1.1trn_pot.zip
+#   http://www.nlpr.ia.ac.cn/databases/download/feature_data/OLHWDB1.1tst_pot.zip
+COPY data/* ./
+
+# scripts
 COPY training/* src/
 
 COPY --from=backups /$checkpoint_dir $checkpoint_dir/
@@ -32,9 +38,8 @@ RUN apt-get update \
 \
     && rm -rf /var/lib/apt/lists/* \
 \
-    && curl -L -O http://www.nlpr.ia.ac.cn/databases/download/feature_data/OLHWDB1.1trn_pot.zip \
-    && curl -L -O http://www.nlpr.ia.ac.cn/databases/download/feature_data/OLHWDB1.1tst_pot.zip \
-\
+    && cat OLHWDB1.1trn_pot.zip.* > OLHWDB1.1trn_pot.zip \
+    && rm -f OLHWDB1.1trn_pot.zip.* \
     && unzip OLHWDB1.1trn_pot.zip -d $train_pot_dir \
     && unzip OLHWDB1.1tst_pot.zip -d $val_pot_dir \
 \
