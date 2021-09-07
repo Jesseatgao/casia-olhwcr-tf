@@ -1,10 +1,11 @@
-name: Build initial checkpoints image/container
+# Build initial checkpoints image/container
+name: Build initial - runonce
 
 on:
   workflow_dispatch:
     inputs:
       tags:
-        description: The tags of the built image (e.g. repo/image:version)
+        description: The tags of the built image (e.g. cgdoc/casia-olhwcr-tf:latest)
         # default: cgdoc/casia-olhwcr-tf:latest
         required: true
 

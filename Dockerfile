@@ -15,7 +15,7 @@ ARG tensorboard_dir=tb_logs
 ARG backup_dir=backup_n_restore
 
 # FIXME: experiment
-ARG epochs=5
+ARG epochs=4
 
 COPY training/* src/
 

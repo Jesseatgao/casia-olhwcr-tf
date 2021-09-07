@@ -1,4 +1,5 @@
-name: Build training image/container
+# Build training image/container
+name: Training - multistage
 
 on:
   workflow_dispatch:
