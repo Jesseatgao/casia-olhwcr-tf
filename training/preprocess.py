@@ -349,3 +349,33 @@ def make_dataset_gb2312_level1(dataset_dir, train_pot_dir=None, val_pot_dir=None
         dump(id2png, id2png_pathname)
 
     return train_dataset_dir, val_dataset_dir, dict_dataset_dir
+
+
+if __name__ == "__main__":
+    from argparse import ArgumentParser
+
+    def _arg_parser():
+        parser = ArgumentParser()
+
+        parser.add_argument('-d', '--working-dir', required=True, dest='working_dir',
+                            help='working directory in which to save all the related files')
+        parser.add_argument('-t', '--train-pot-dir', default='train_pot', dest='train_pot_dir',
+                            help='directory containing the training POT files; relative to `working_dir`')
+        parser.add_argument('-v', '--validation-pot-dir', default='val_pot', dest='val_pot_dir',
+                            help='directory containing the validation POT files; relative to `working_dir`')
+        parser.add_argument('-D', '--dataset-dir', default='dataset', dest='dataset_dir',
+                            help='directory in which to save the generated training and test dataset in pickle format; '
+                                 'relative to `working_dir`')
+
+        return parser
+
+    args = _arg_parser().parse_args()
+
+    working_dir = args.working_dir
+    train_pot_dir = os.path.join(working_dir, args.train_pot_dir)
+    val_pot_dir = os.path.join(working_dir, args.val_pot_dir)
+    dataset_dir = os.path.join(working_dir, args.dataset_dir)
+
+    train_dataset_dir, val_dataset_dir, dict_dataset_dir = make_dataset_gb2312_level1(dataset_dir,
+                                                                                      train_pot_dir=train_pot_dir,
+                                                                                      val_pot_dir=val_pot_dir)

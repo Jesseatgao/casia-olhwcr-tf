@@ -10,9 +10,14 @@ WORKDIR $workdir
 
 ARG train_pot_dir=train_pot
 ARG val_pot_dir=val_pot
+ARG dataset_dir=dataset
+
 ARG checkpoint_dir=ckpts
 ARG tensorboard_dir=tb_logs
 ARG backup_dir=backup_n_restore
+
+ARG train_dataset_dir=$dataset_dir/training
+ARG val_dataset_dir=$dataset_dir/validation
 
 # FIXME: experiment
 ARG epochs=2
@@ -26,8 +31,8 @@ COPY data/* ./
 COPY training/* src/
 
 COPY --from=backups /$checkpoint_dir $checkpoint_dir/
-COPY --from=backups /$tensorboard_dir $tensorboard_dir/
-COPY --from=backups /$backup_dir $backup_dir/
+# COPY --from=backups /$tensorboard_dir $tensorboard_dir/
+# COPY --from=backups /$backup_dir $backup_dir/
 
 
 RUN apt-get update \
@@ -43,7 +48,8 @@ RUN apt-get update \
     && unzip OLHWDB1.1trn_pot.zip -d $train_pot_dir \
     && unzip OLHWDB1.1tst_pot.zip -d $val_pot_dir \
 \
-    && python3 src/model.py -d $workdir -t $train_pot_dir -v $val_pot_dir -C $checkpoint_dir -T $tensorboard_dir -R $backup_dir -E $epochs
+    && python3 src/preprocess.py -d $workdir -t $train_pot_dir -v $val_pot_dir -D $dataset_dir \
+    && python3 src/model.py -d $workdir -t $train_dataset_dir -v $val_dataset_dir -C $checkpoint_dir -T $tensorboard_dir -R $backup_dir -E $epochs
 
 
 FROM scratch

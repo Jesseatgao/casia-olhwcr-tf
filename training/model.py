@@ -108,6 +108,9 @@ def make_train_model(checkpoint_dir, tensorboard_dir, backup_dir):
     # setup the training (compiled) model
     model = _build_model(training=True)
 
+    if latest_checkpoint:
+        model.load_weights(latest_checkpoint)
+
     model.compile(optimizer=optimizers.RMSprop(),
                   loss=losses.SparseCategoricalCrossentropy(from_logits=True),
                   metrics=['accuracy'])
@@ -144,21 +147,18 @@ def make_train_model(checkpoint_dir, tensorboard_dir, backup_dir):
 if __name__ == "__main__":
     from argparse import ArgumentParser
 
-    from preprocess import make_dataset_gb2312_level1
-
-
     def _arg_parser():
         parser = ArgumentParser()
 
         parser.add_argument('-d', '--working-dir', required=True, dest='working_dir',
                             help='working directory in which to save all the related files')
-        parser.add_argument('-t', '--train-pot-dir', default='train_pot', dest='train_pot_dir',
-                            help='directory containing the training POT files; relative to `working_dir`')
-        parser.add_argument('-v', '--validation-pot-dir', default='val_pot', dest='val_pot_dir',
-                            help='directory containing the validation POT files; relative to `working_dir`')
-        parser.add_argument('-D', '--dataset-dir', default='dataset', dest='dataset_dir',
-                            help='directory in which to save the generated training and test dataset in pickle format; '
+        parser.add_argument('-t', '--train-dataset-dir', default='dataset/training', dest='train_dataset_dir',
+                            help='directory containing the training data files in pickle format; '
                                  'relative to `working_dir`')
+        parser.add_argument('-v', '--validation-dataset-dir', default='dataset/validation', dest='val_dataset_dir',
+                            help='directory containing the validation data files in pickle format; '
+                                 'relative to `working_dir`')
+
         parser.add_argument('-C', '--checkpoint-dir', default='ckpts', dest='checkpoint_dir',
                             help='directory in which to save the model checkpoints; relative to `working_dir`')
         parser.add_argument('-T', '--tensorboard-dir', default='tb_logs', dest='tensorboard_dir',
@@ -178,9 +178,10 @@ if __name__ == "__main__":
 
     # FIXME: hyperparameters
     working_dir = args.working_dir
-    train_pot_dir = os.path.join(working_dir, args.train_pot_dir)
-    val_pot_dir = os.path.join(working_dir, args.val_pot_dir)
-    dataset_dir = os.path.join(working_dir, args.dataset_dir)
+
+    train_dataset_dir = os.path.join(working_dir, args.train_dataset_dir)
+    val_dataset_dir = os.path.join(working_dir, args.val_dataset_dir)
+
     checkpoint_dir = os.path.join(working_dir, args.checkpoint_dir)
     tensorboard_dir = os.path.join(working_dir, args.tensorboard_dir)
     backup_dir = os.path.join(working_dir, args.backup_dir)
@@ -189,10 +190,7 @@ if __name__ == "__main__":
     batch_size = args.batch_size
     verbose = args.verbose
 
-    train_dataset_dir, val_dataset_dir, _ = make_dataset_gb2312_level1(dataset_dir,
-                                                                       train_pot_dir=train_pot_dir,
-                                                                       val_pot_dir=val_pot_dir)
-
+    # build the training and validation data pipeline
     train_dataset = build_input_pipeline(train_dataset_dir)
     train_dataset = train_dataset.shuffle(buffer_size=512)
     train_dataset = train_dataset.apply(tf.data.experimental.dense_to_ragged_batch(batch_size=batch_size))
