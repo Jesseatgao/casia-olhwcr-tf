@@ -169,7 +169,7 @@ if __name__ == "__main__":
                             help='epochs to run for training, though early stopping may occur')
         parser.add_argument('-B', '--batch-size', default=32, dest='batch_size', type=int,
                             help='mini batch size for training the model')
-        parser.add_argument('-V', '--verbose', default=2, dest='verbose', choices=[0, 1, 2],
+        parser.add_argument('-V', '--verbose', default=2, dest='verbose',  type=int, choices=[0, 1, 2],
                             help='verbosity mode. 0 = silent, 1 = progress bar, 2 = one line per epoch')
 
         return parser
