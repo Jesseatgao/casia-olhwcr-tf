@@ -263,7 +263,7 @@ cv_resize = cv_resize_img_retaining_AR
 
 
 def make_dataset_gb2312_level1(dataset_dir, train_pot_dir=None, val_pot_dir=None, pot_batch=10,
-                               font=None, img_size=32, normalization=False):
+                               font=None, img_size=32, normalization=False, id_hans_dicts=True):
     # subdirs relative to `dataset_dir`
     TRAIN_DATASET_SUBDIR = "training"  # 'train_data.pkl', or 'train_data-001.pkl', 'train_data-002.pkl', ...
     VAL_DATASET_SUBDIR = "validation"  # 'val_data.pkl', or 'val_data-001.pkl', 'val_data-002.pkl', ...
@@ -290,12 +290,6 @@ def make_dataset_gb2312_level1(dataset_dir, train_pot_dir=None, val_pot_dir=None
         return hans_to_id, id_to_hans
 
     hans2id, id2hans = hans_id_dict()
-
-    dict_dataset_dir = os.path.abspath(os.path.join(dataset_dir, DICT_DATASET_SBUDIR))
-
-    # dump the id-to-hans_text dict
-    id2hans_pathname = os.path.join(dict_dataset_dir, 'id2hans.pkl')
-    dump(id2hans, id2hans_pathname)
 
     def process_image(img, new_size, norm):
         # scale the image to (new_size, new_size) pixels
@@ -341,12 +335,19 @@ def make_dataset_gb2312_level1(dataset_dir, train_pot_dir=None, val_pot_dir=None
         val_data_pn = os.path.join(val_dataset_dir, 'val_data.pkl')  # validation dataset template pathname
         make_data(val_data_pn, val_pot_dir)
 
-    # make the id-to-printed_Chinese_character_image dict
-    if font:
-        # map ID number to PNG image
-        id2png = {clsid: get_hans_png_bytes(hans, font, size=img_size) for hans, clsid in hans2id.items()}
-        id2png_pathname = os.path.join(dict_dataset_dir, 'id2png.pkl')
-        dump(id2png, id2png_pathname)
+    if id_hans_dicts:
+        dict_dataset_dir = os.path.abspath(os.path.join(dataset_dir, DICT_DATASET_SBUDIR))
+
+        # dump the id-to-hans_text dict
+        id2hans_pathname = os.path.join(dict_dataset_dir, 'id2hans.pkl')
+        dump(id2hans, id2hans_pathname)
+
+        # make the id-to-printed_Chinese_character_image dict
+        if font:
+            # map ID number to PNG image
+            id2png = {clsid: get_hans_png_bytes(hans, font, size=img_size) for hans, clsid in hans2id.items()}
+            id2png_pathname = os.path.join(dict_dataset_dir, 'id2png.pkl')
+            dump(id2png, id2png_pathname)
 
     return train_dataset_dir, val_dataset_dir, dict_dataset_dir
 
@@ -359,10 +360,19 @@ if __name__ == "__main__":
 
         parser.add_argument('-d', '--working-dir', required=True, dest='working_dir',
                             help='working directory in which to save all the related files')
-        parser.add_argument('-t', '--train-pot-dir', default='train_pot', dest='train_pot_dir',
-                            help='directory containing the training POT files; relative to `working_dir`')
-        parser.add_argument('-v', '--validation-pot-dir', default='val_pot', dest='val_pot_dir',
-                            help='directory containing the validation POT files; relative to `working_dir`')
+        parser.add_argument('-t', '--train-pot-dir', default='train_pot', dest='train_pot_dir', nargs='?', const=None,
+                            help='directory containing the training POT files; relative to `working_dir`. '
+                                 'if not given, it will default to `train_pot`; with no argument followed, '
+                                 'it will consume a value of `None`')
+        parser.add_argument('-v', '--validation-pot-dir', default='val_pot', dest='val_pot_dir', nargs='?', const=None,
+                            help='directory containing the validation POT files; relative to `working_dir`. '
+                                 'if not given, it will default to `val_pot`; with no argument followed, '
+                                 'it will consume a value of `None`')
+        parser.add_argument('-f', '--font-file', default=None, dest='font_file',
+                            help='true type font file used to generate the standard Chinese character images, '
+                                 'e.g. /absolute/path/to/simhei.ttf')
+        parser.add_argument('-B', '--pot-batch', default=10, dest='pot_batch', type=int,
+                            help='number of POT files combined to produce one of the training datasets')
         parser.add_argument('-D', '--dataset-dir', default='dataset', dest='dataset_dir',
                             help='directory in which to save the generated training and test dataset in pickle format; '
                                  'relative to `working_dir`')
@@ -372,10 +382,15 @@ if __name__ == "__main__":
     args = _arg_parser().parse_args()
 
     working_dir = args.working_dir
-    train_pot_dir = os.path.join(working_dir, args.train_pot_dir)
-    val_pot_dir = os.path.join(working_dir, args.val_pot_dir)
     dataset_dir = os.path.join(working_dir, args.dataset_dir)
+
+    train_pot_dir = os.path.join(working_dir, args.train_pot_dir) if args.train_pot_dir else args.train_pot_dir
+    val_pot_dir = os.path.join(working_dir, args.val_pot_dir) if args.val_pot_dir else args.val_pot_dir
+    font_file = args.font_file
+    pot_batch = args.pot_batch
 
     train_dataset_dir, val_dataset_dir, dict_dataset_dir = make_dataset_gb2312_level1(dataset_dir,
                                                                                       train_pot_dir=train_pot_dir,
-                                                                                      val_pot_dir=val_pot_dir)
+                                                                                      val_pot_dir=val_pot_dir,
+                                                                                      pot_batch=pot_batch,
+                                                                                      font=font_file)

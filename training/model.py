@@ -8,7 +8,12 @@ from tensorflow.keras import layers, losses, optimizers
 
 
 def load_data_from_disk(files):
-    for fn in files:
+    buffer_size = len(files)
+
+    dataset = tf.data.Dataset.from_tensor_slices(files)
+    dataset = dataset.shuffle(buffer_size)
+
+    for fn in dataset.as_numpy_iterator():
         with open(fn, 'rb') as fd:
             data = pickle.load(fd)
 
@@ -126,7 +131,7 @@ def make_train_model(checkpoint_dir, tensorboard_dir, backup_dir):
                                                      embeddings_freq=0, update_freq='epoch')
 
         earlystop_cb = keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=1e-2,
-                                                     patience=2, verbose=0)
+                                                     patience=5, verbose=0)
 
         backup_cb = keras.callbacks.experimental.BackupAndRestore(backup_dir=backup_dir)
 
@@ -165,10 +170,12 @@ if __name__ == "__main__":
                             help='directory in which to save the tensorboard logs; relative to `working_dir`')
         parser.add_argument('-R', '--backup-dir', default='backup_n_restore', dest='backup_dir',
                             help='directory in which to save the BackupAndRestore logs; relative to `working_dir`')
-        parser.add_argument('-E', '--epochs', default=15000, dest='epochs', type=int,
+        parser.add_argument('-E', '--epochs', default=100, dest='epochs', type=int,
                             help='epochs to run for training, though early stopping may occur')
         parser.add_argument('-B', '--batch-size', default=32, dest='batch_size', type=int,
                             help='mini batch size for training the model')
+        parser.add_argument('-S', '--shuffle-buffer-size', default=1200, dest='shuffle_size', type=int,
+                            help='buffer size for shuffling the dataset using two-level shuffling')
         parser.add_argument('-V', '--verbose', default=2, dest='verbose',  type=int, choices=[0, 1, 2],
                             help='verbosity mode. 0 = silent, 1 = progress bar, 2 = one line per epoch')
 
@@ -188,11 +195,12 @@ if __name__ == "__main__":
 
     epochs = args.epochs
     batch_size = args.batch_size
+    shuffle_size = args.shuffle_size
     verbose = args.verbose
 
     # build the training and validation data pipeline
     train_dataset = build_input_pipeline(train_dataset_dir)
-    train_dataset = train_dataset.shuffle(buffer_size=512)
+    train_dataset = train_dataset.shuffle(buffer_size=shuffle_size)
     train_dataset = train_dataset.apply(tf.data.experimental.dense_to_ragged_batch(batch_size=batch_size))
 
     val_dataset = build_input_pipeline(val_dataset_dir)
