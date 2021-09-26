@@ -119,11 +119,14 @@ def _draw_img_seq_from_strokes(strokes):
         pts = np.add(pts, (x_shift, y_shift))  # convert to relative coordinates
         curves.append(pts)
 
-        canvas = np.ones((box_height, box_width), dtype=np.uint8) * 255
-        img = cv.polylines(canvas, curves, False, color=(0, 0, 0), thickness=thickness, lineType=cv.LINE_AA)
+        canvas = np.zeros((box_height, box_width), dtype=np.uint8)  # black background
+        img = cv.polylines(canvas, [pts], False, color=(255, 255, 255), thickness=thickness, lineType=cv.LINE_AA)
         images.append(img)
 
-    return images
+    canvas = np.zeros((box_height, box_width), dtype=np.uint8)
+    big_pic = cv.polylines(canvas, curves, False, color=(255, 255, 255), thickness=thickness, lineType=cv.LINE_AA)
+
+    return images, big_pic
 
 
 def get_imgs_from_casia_pot(fn):
@@ -142,9 +145,9 @@ def get_imgs_from_casia_pot(fn):
                 break
 
             strokes = _consume_sample_strokes(fd, stroke_num)
-            imgs = _draw_img_seq_from_strokes(strokes)
+            imgs, big_pic = _draw_img_seq_from_strokes(strokes)
 
-            yield imgs, char
+            yield imgs, big_pic, char
 
             # consume the character end tag
             fd.read(POT_SAMPLE_POINT_SIZE)
@@ -199,21 +202,23 @@ def build_charset_from_train_pots(dirname, charset_size=None):
     return chars
 
 
-def get_hans_png_bytes(hans, font, size=64):
+def get_hans_png_bytes(hans, font, size=32, bg_color='black', txt_color='white'):
     """
 
     Args:
         hans (str):
         font (str):
         size (int):
+        bg_color (str):
+        txt_color (str):
 
     Returns:
 
     """
-    image = Image.new('L', (size, size), 'white')
+    image = Image.new('L', (size, size), bg_color)
     draw = ImageDraw.Draw(image)
     font = ImageFont.truetype(font, size)
-    draw.text((0, 0), hans, fill='black', font=font)
+    draw.text((0, 0), hans, fill=txt_color, font=font)
 
     with BytesIO() as buf:
         image.save(buf, format='PNG')
@@ -226,7 +231,7 @@ def cv_resize_img_retaining_AR(img, size=(32, 32), interpolation=None):
     """Resize the image while keeping the aspect ratio of the original shape.
 
     Args:
-        img (:obj:`np.ndarray`): The input image to resize, assuming which has a white background.
+        img (:obj:`np.ndarray`): The input image to resize, assuming which has a black background.
         size (2-tuple of int): The width and height of the desired output image.
         interpolation (int): The interpolation method, e.g. ``cv.INTER_AREA``.
 
@@ -249,11 +254,11 @@ def cv_resize_img_retaining_AR(img, size=(32, 32), interpolation=None):
     y_pos = (sw - h) // 2
 
     if len(img.shape) == 2:
-        mask = np.ones((sw, sw), dtype=img.dtype)*255  # white background
+        mask = np.zeros((sw, sw), dtype=img.dtype)  # black background
         mask[y_pos:y_pos + h, x_pos:x_pos + w] = img
     else:
         ch = img.shape[2]  # channel number
-        mask = np.ones((sw, sw, ch), dtype=img.dtype)*255
+        mask = np.zeros((sw, sw, ch), dtype=img.dtype)  # black background
         mask[y_pos:y_pos + h, x_pos:x_pos + w, :] = img
 
     return cv.resize(mask, size, interpolation)
@@ -317,8 +322,9 @@ def make_dataset_gb2312_level1(dataset_dir, train_pot_dir=None, val_pot_dir=None
             mid = "-{:03}".format(n) if pot_batch < len(pots) else ""
             data_fn = "{}{}{}".format(fb, mid, ext)
 
-            data = [([process_image(img, img_size, normalization) for img in imgs], hans2id[char])
-                    for fn in fs for imgs, char in get_imgs_from_casia_pot(fn)]
+            data = [([process_image(img, img_size, normalization) for img in imgs],
+                     process_image(big_pic, img_size, normalization), hans2id[char])
+                    for fn in fs for imgs, big_pic, char in get_imgs_from_casia_pot(fn)]
             dump(data, data_fn)
 
             n += 1

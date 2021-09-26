@@ -17,14 +17,18 @@ def load_data_from_disk(files):
         with open(fn, 'rb') as fd:
             data = pickle.load(fd)
 
-        for imgs, label in data:
-            imgs = tf.reshape(imgs, [-1, 32, 32, 1])
+        for imgs, big_pic, label in data:
+            imgs = tf.reshape(imgs, [-1, 1024])
 
             # do the normalization on the fly to save disk space (Preprocessing should have been done in real life!)
             imgs = tf.cast(imgs, tf.float32)  # tf.uint8 -> tf.float32
             imgs = tf.divide(imgs, 255)
 
-            yield imgs, label
+            big_pic = tf.reshape(big_pic, [32, 32, 1])
+            big_pic = tf.cast(big_pic, tf.float32)
+            big_pic = tf.divide(big_pic, 255)
+
+            yield imgs, big_pic, label
 
 
 def build_input_pipeline(dataset_dir):
@@ -33,37 +37,33 @@ def build_input_pipeline(dataset_dir):
     dataset = tf.data.Dataset.from_generator(
         load_data_from_disk,
         output_signature=(
-            tf.TensorSpec(shape=(None, 32, 32, 1), dtype=tf.float32),
+            tf.TensorSpec(shape=(None, 1024), dtype=tf.float32),
+            tf.TensorSpec(shape=(32, 32, 1), dtype=tf.float32),
             tf.TensorSpec(shape=(), dtype=tf.int32)),
         args=(data_files,)
     )
+    dataset = dataset.map(lambda imgs, big_pic, label: ((imgs, big_pic), label))
 
     return dataset
 
 
 # FIXME: hyperparameters
 def _build_model(training=True):
-    inputs = keras.Input(shape=(None, 32, 32, 1), dtype=tf.float32, ragged=True, name="input_layer")
+    inputs_lstm = keras.Input(shape=(None, 1024), dtype=tf.float32, ragged=True, name="inputs_lstm")
+    inputs_conv = keras.Input(shape=(32, 32, 1), dtype=tf.float32, name="inputs_conv")
 
     # Conv
-    conv1 = layers.Conv2D(32, 3, activation='relu', padding='same', name="conv_layer_1")
-    timedist_conv1 = layers.TimeDistributed(conv1)(inputs)
-    conv1_1 = layers.Conv2D(32, 3, activation='relu', padding='same', name="conv_layer_1_1")
-    timedist_conv1_1 = layers.TimeDistributed(conv1_1)(timedist_conv1)
+    conv1 = layers.Conv2D(32, 3, activation='relu', padding='same', name="conv_layer_1")(inputs_conv)
+    conv1_1 = layers.Conv2D(32, 3, activation='relu', padding='same', name="conv_layer_1_1")(conv1)
 
-    timedist_flatten1 = layers.TimeDistributed(layers.Flatten())(timedist_conv1_1)
-    globalavgpool1 = layers.GlobalAveragePooling1D()(timedist_flatten1)
-
-    reshape1 = layers.Reshape((32, 32, 32))(globalavgpool1)
-
-    maxpool1 = layers.MaxPool2D(pool_size=(2, 2), name="maxpool_layer_1")(reshape1)
-    dropout1 = layers.Dropout(0.2, name="dropout_layer_1")(maxpool1)
+    maxpool1 = layers.MaxPool2D(pool_size=(2, 2), name="maxpool_layer_1")(conv1_1)
+    dropout1 = layers.Dropout(0.2, name="dropout_layer_1")(maxpool1, training=training)
 
     conv2 = layers.Conv2D(64, 3, activation='relu', padding='same', name="conv_layer_2")(dropout1)
     conv2_1 = layers.Conv2D(64, 3, activation='relu', padding='same', name="conv_layer_2_1")(conv2)
 
     maxpool2 = layers.MaxPool2D(pool_size=(2, 2), name="maxpool_layer_2")(conv2_1)
-    dropout2 = layers.Dropout(0.2, name="dropout_layer_2")(maxpool2)
+    dropout2 = layers.Dropout(0.2, name="dropout_layer_2")(maxpool2, training=training)
 
     # flatten1 = layers.Flatten()(dropout2)
 
@@ -72,12 +72,21 @@ def _build_model(training=True):
 
     flatten1 = layers.Flatten()(conv3)
 
-    dense1 = layers.Dense(1024, activation='relu', name="dense_layer_1")(flatten1)
+    # lstm
+    blstm1 = layers.Bidirectional(layers.LSTM(64, dropout=0.2, name="blstm_layer_1"))(inputs_lstm, training=training)
+
+    blstm1_dropout = layers.Dropout(0.2, name="dropout_blstm1")(blstm1, training=training)
+
+    flatten2 = layers.Flatten(name="flatten_layer_1")(blstm1_dropout)
+
+    concat1 = layers.Concatenate(name="concat_layer_1")([flatten1, flatten2])
+
+    dense1 = layers.Dense(1024, activation='relu', name="dense_layer_1")(concat1)
     dense1_dropout = layers.Dropout(0.3, name="dense1_dropout")(dense1, training=training)
 
     outputs = layers.Dense(3755, name="output_layer")(dense1_dropout)
 
-    model = keras.Model(inputs=inputs, outputs=outputs)
+    model = keras.Model(inputs=[inputs_lstm, inputs_conv], outputs=outputs)
 
     return model
 
