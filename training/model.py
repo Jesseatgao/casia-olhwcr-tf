@@ -48,45 +48,34 @@ def _build_model(training=True):
     # Conv
     conv1 = layers.Conv2D(32, 3, activation='relu', padding='same', name="conv_layer_1")
     timedist_conv1 = layers.TimeDistributed(conv1)(inputs)
-    maxpool1 = layers.MaxPool2D(pool_size=(2, 2), name="maxpool_layer_1")
-    timedist_maxpool1 = layers.TimeDistributed(maxpool1)(timedist_conv1)
+    conv1_1 = layers.Conv2D(32, 3, activation='relu', padding='same', name="conv_layer_1_1")
+    timedist_conv1_1 = layers.TimeDistributed(conv1_1)(timedist_conv1)
 
-    conv2 = layers.Conv2D(64, 3, activation='relu', padding='same', name="conv_layer_2")
-    timedist_conv2 = layers.TimeDistributed(conv2)(timedist_maxpool1)
-    maxpool2 = layers.MaxPool2D(pool_size=(2, 2), name="maxpool_layer_2")
-    timedist_maxpool2 = layers.TimeDistributed(maxpool2)(timedist_conv2)
+    timedist_flatten1 = layers.TimeDistributed(layers.Flatten())(timedist_conv1_1)
+    globalavgpool1 = layers.GlobalAveragePooling1D()(timedist_flatten1)
+
+    reshape1 = layers.Reshape((32, 32, 32))(globalavgpool1)
+
+    maxpool1 = layers.MaxPool2D(pool_size=(2, 2), name="maxpool_layer_1")(reshape1)
+    dropout1 = layers.Dropout(0.2, name="dropout_layer_1")(maxpool1)
+
+    conv2 = layers.Conv2D(64, 3, activation='relu', padding='same', name="conv_layer_2")(dropout1)
+    conv2_1 = layers.Conv2D(64, 3, activation='relu', padding='same', name="conv_layer_2_1")(conv2)
+
+    maxpool2 = layers.MaxPool2D(pool_size=(2, 2), name="maxpool_layer_2")(conv2_1)
+    dropout2 = layers.Dropout(0.2, name="dropout_layer_2")(maxpool2)
+
+    # flatten1 = layers.Flatten()(dropout2)
 
     # projection
-    conv3 = layers.Conv2D(16, 1, activation='relu', padding='same', name="conv_layer_3")
-    timedist_conv3 = layers.TimeDistributed(conv3)(timedist_maxpool2)
+    conv3 = layers.Conv2D(16, 1, activation='relu', padding='same', name="conv_layer_3")(dropout2)
 
-    timedist_flatten1 = layers.TimeDistributed(layers.Flatten())(timedist_conv3)
+    flatten1 = layers.Flatten()(conv3)
 
-    # LSTM with long-term features
-    blstm1 = layers.Bidirectional(layers.LSTM(16, dropout=0.3, name="blstm_layer_1"))(timedist_flatten1,
-                                                                                      training=training)
+    dense1 = layers.Dense(1024, activation='relu', name="dense_layer_1")(flatten1)
+    dense1_dropout = layers.Dropout(0.3, name="dense1_dropout")(dense1, training=training)
 
-    flatten1 = layers.Flatten(name="flatten_layer_1")(blstm1)
-
-    # LSTM with short-term features
-    timedist_flatten2 = layers.TimeDistributed(layers.Flatten())(inputs)
-
-    blstm2 = layers.Bidirectional(layers.LSTM(16, dropout=0.3, name="blstm_layer_2"))(timedist_flatten2,
-                                                                                      training=training)
-
-    flatten2 = layers.Flatten(name="flatten_layer_2")(blstm2)
-
-    # max Conv over the pic series from the first stroke to the very last big pic
-    globalmaxpool1 = layers.GlobalMaxPool1D()(timedist_flatten1)
-
-    # flatten3 = layers.Flatten(name="flatten_layer_3")(globalmaxpool1)
-
-    concat1 = layers.Concatenate(name="concat_layer_1")([flatten1, flatten2, globalmaxpool1])
-
-    dense1 = layers.Dense(1024, activation='relu', name="dense_layer_1")(concat1)
-    dropout1 = layers.Dropout(0.3, name="dropout_layer_1")(dense1, training=training)
-
-    outputs = layers.Dense(3755, name="output_layer")(dropout1)
+    outputs = layers.Dense(3755, name="output_layer")(dense1_dropout)
 
     model = keras.Model(inputs=inputs, outputs=outputs)
 
@@ -116,7 +105,7 @@ def make_train_model(checkpoint_dir, tensorboard_dir, backup_dir):
     if latest_checkpoint:
         model.load_weights(latest_checkpoint)
 
-    model.compile(optimizer=optimizers.RMSprop(),
+    model.compile(optimizer=optimizers.Adam(learning_rate=1e-3),
                   loss=losses.SparseCategoricalCrossentropy(from_logits=True),
                   metrics=['accuracy'])
 
@@ -214,7 +203,7 @@ if __name__ == "__main__":
     model._train_dataset = train_dataset
     model._val_dataset = val_dataset
 
-    model.summary()
+    model.summary(line_length=150)
 
     model.fit(train_dataset, epochs=epochs, validation_data=val_dataset, callbacks=callbacks, verbose=verbose)
 
