@@ -7,11 +7,12 @@ from tensorflow import keras
 from tensorflow.keras import layers, losses, optimizers
 
 
-def load_data_from_disk(files):
-    buffer_size = len(files)
-
+def load_data_from_disk(files, shuffle=True, files_shuffle_size=None):
     dataset = tf.data.Dataset.from_tensor_slices(files)
-    dataset = dataset.shuffle(buffer_size)
+
+    if shuffle:
+        buffer_size = len(files) if files_shuffle_size is None else files_shuffle_size
+        dataset = dataset.shuffle(buffer_size)
 
     for fn in dataset.as_numpy_iterator():
         with open(fn, 'rb') as fd:
@@ -31,18 +32,25 @@ def load_data_from_disk(files):
             yield imgs, big_pic, label
 
 
-def build_input_pipeline(dataset_dir):
+def build_input_pipeline(dataset_dir, shuffle=True, files_shuffle_size=None, elems_shuffle_size=1200, batch_size=32, prefetch_size=1):
     data_file_pat = os.path.normpath(os.path.join(dataset_dir, r"**/*.pkl"))
     data_files = sorted(glob.glob(data_file_pat, recursive=True))  # always return the files in the same order
+
+    data_gen = load_data_from_disk(data_files, shuffle=shuffle, files_shuffle_size=files_shuffle_size)
     dataset = tf.data.Dataset.from_generator(
-        load_data_from_disk,
+        lambda: data_gen,
         output_signature=(
             tf.TensorSpec(shape=(None, 1024), dtype=tf.float32),
             tf.TensorSpec(shape=(32, 32, 1), dtype=tf.float32),
-            tf.TensorSpec(shape=(), dtype=tf.int32)),
-        args=(data_files,)
+            tf.TensorSpec(shape=(), dtype=tf.int32))
     )
     dataset = dataset.map(lambda imgs, big_pic, label: ((imgs, big_pic), label))
+
+    if shuffle:
+        dataset = dataset.shuffle(elems_shuffle_size)
+
+    dataset = dataset.apply(tf.data.experimental.dense_to_ragged_batch(batch_size=batch_size))
+    dataset = dataset.prefetch(prefetch_size)
 
     return dataset
 
@@ -173,7 +181,7 @@ if __name__ == "__main__":
         parser.add_argument('-B', '--batch-size', default=32, dest='batch_size', type=int,
                             help='mini batch size for training the model')
         parser.add_argument('-S', '--shuffle-buffer-size', default=1200, dest='shuffle_size', type=int,
-                            help='buffer size for shuffling the dataset using two-level shuffling')
+                            help='buffer size for shuffling the training elements using two-level shuffling')
         parser.add_argument('-V', '--verbose', default=2, dest='verbose',  type=int, choices=[0, 1, 2],
                             help='verbosity mode. 0 = silent, 1 = progress bar, 2 = one line per epoch')
 
@@ -197,12 +205,8 @@ if __name__ == "__main__":
     verbose = args.verbose
 
     # build the training and validation data pipeline
-    train_dataset = build_input_pipeline(train_dataset_dir)
-    train_dataset = train_dataset.shuffle(buffer_size=shuffle_size)
-    train_dataset = train_dataset.apply(tf.data.experimental.dense_to_ragged_batch(batch_size=batch_size))
-
-    val_dataset = build_input_pipeline(val_dataset_dir)
-    val_dataset = val_dataset.apply(tf.data.experimental.dense_to_ragged_batch(batch_size=batch_size))
+    train_dataset = build_input_pipeline(train_dataset_dir, shuffle=True, elems_shuffle_size=shuffle_size, batch_size=batch_size)
+    val_dataset = build_input_pipeline(val_dataset_dir, shuffle=False, batch_size=batch_size)
 
     model, callbacks = make_train_model(checkpoint_dir=checkpoint_dir,
                                         tensorboard_dir=tensorboard_dir,
