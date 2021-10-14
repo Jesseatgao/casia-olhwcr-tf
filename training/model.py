@@ -1,6 +1,7 @@
 import os
 import glob
 import pickle
+from functools import partial
 
 import tensorflow as tf
 from tensorflow import keras
@@ -36,13 +37,14 @@ def build_input_pipeline(dataset_dir, shuffle=True, files_shuffle_size=None, ele
     data_file_pat = os.path.normpath(os.path.join(dataset_dir, r"**/*.pkl"))
     data_files = sorted(glob.glob(data_file_pat, recursive=True))  # always return the files in the same order
 
-    data_gen = load_data_from_disk(data_files, shuffle=shuffle, files_shuffle_size=files_shuffle_size)
+    data_gen = partial(load_data_from_disk, files_shuffle_size=files_shuffle_size)
     dataset = tf.data.Dataset.from_generator(
-        lambda: data_gen,
+        data_gen,
         output_signature=(
             tf.TensorSpec(shape=(None, 1024), dtype=tf.float32),
             tf.TensorSpec(shape=(32, 32, 1), dtype=tf.float32),
-            tf.TensorSpec(shape=(), dtype=tf.int32))
+            tf.TensorSpec(shape=(), dtype=tf.int32)),
+        args=(data_files, shuffle)
     )
     dataset = dataset.map(lambda imgs, big_pic, label: ((imgs, big_pic), label))
 
