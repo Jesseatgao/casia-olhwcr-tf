@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>在线手写汉字识别 - Handwriting Chinese Character Recognition</title>
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+
+    <link rel="stylesheet" type="text/css" href="{{url_for('recognition_bp.static', filename='css/drawingboard.css')}}">
+    <link rel="stylesheet" type="text/css" href="{{url_for('recognition_bp.static', filename='css/style.css')}}">
+
+    <script src="{{url_for('recognition_bp.static', filename='js/jquery-1.11.2.min.js')}}"></script>
+    <script src="{{url_for('recognition_bp.static', filename='js/drawingboard.js')}}"></script>
+</head>
+<body>
+<div class="instructions">在线手写汉字识别<br>(Online Handwriting Chinese Character Recognition)</div>
+<div id="canvasContainer">
+    <div id="drawingInterface">
+        <div class="board" id="custom-board"></div>
+        <div class="drawingOutput">
+            <div class="row">
+                <div class="info">原始图(Input)：</div>
+                <div class="tinyBoard">
+                    <canvas class="tinyCanvas" id="tiny"></canvas>
+                </div>
+            </div>
+            <div class="row">
+                <div class="info cell">识别结果(Result)1：
+                    <div id="pred1_accuracy">可能性(Prob.):</div>
+                </div>
+                <div id="ans1" class="ans cell"><img id="pred1_result" src=""/></div>
+                <div class="info cell">识别结果(Result)2：
+                    <div id="pred2_accuracy">可能性(Prob.):</div>
+                </div>
+                <div id="ans2" class="ans cell"><img id="pred2_result" src=""/></div>
+                <div class="info cell">识别结果(Result)3：
+                    <div id="pred3_accuracy">可能性(Prob.):</div>
+                </div>
+                <div id="ans3" class="ans cell"><img id="pred3_result" src=""/></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    var customBoard = new DrawingBoard.Board('custom-board', {
+                background: "#fff",
+                color: "#000000",
+                size: 10,
+                controls: [
+                    { Navigation: { back: true, forward: true, reset: true } },
+                    { DrawingMode: { pencil: true, filler: false, eraser: false } }
+                ],
+                controlsPosition: "bottom center",
+                webStorage: 'session',
+                droppable: false
+            });
+    customBoard.ev.bind('board:reset', onBoardReset);
+    customBoard.ev.bind('board:stopDrawing', onBoardStopDrawing);
+    customBoard.ev.bind('navigation:back', onNavigationBack);
+    customBoard.ev.bind('navigation:forward', onNavigationForward);
+
+    var tinyCtx = document.getElementById('tiny').getContext("2d");
+
+    var obCanvas = createCanvas(32, 32);
+    var myCanvas = obCanvas.canvas;
+    var myCanvasCtx = obCanvas.ctx;
+
+    var blankDataURLBigPic = createCanvas(320, 320).canvas.toDataURL();
+
+    var blankDataURL = createCanvas(64, 64).canvas.toDataURL();
+    var blankMsg = {
+        pred1_image: blankDataURL,
+        pred2_image: blankDataURL,
+        pred3_image: blankDataURL,
+        pred1_accuracy: '',
+        pred2_accuracy: '',
+        pred3_accuracy: ''
+    };
+
+    var strokes = [];
+
+    function log() {
+        // console.log(customBoard.history.stack.length, customBoard.history.position);
+        // console.log(customBoard.history.stack[0]);
+        // console.log(customBoard.history.stack[customBoard.history.position]);
+
+        // console.log(strokes.length);
+        // console.log(strokes.at(-1));
+    }
+
+    function onBoardReset() {
+        strokes.length = 0;
+
+        updateTinyBoard();
+        updateView(blankMsg);
+
+        log();
+    }
+
+    function onBoardStopDrawing() {
+        function done() {
+            var stroke = myCanvas.toDataURL();
+            stroke = stroke.replace('data:image/png;base64,', '');
+            strokes.push(stroke);
+
+            doRecognition();
+            log();
+        }
+
+        updateTinyBoard();
+
+/*        var obCanvas = createCanvas(32, 32);
+        var myCanvas = obCanvas.canvas;
+        var myCanvasCtx = obCanvas.ctx;*/
+
+        var img1 = customBoard.history.stack[customBoard.history.position - 1];
+        var img2 = customBoard.history.stack[customBoard.history.position];
+        diffImageOnCanvas(myCanvasCtx, img1, img2, done);
+    }
+
+    function onNavigationBack() {
+        strokes.pop();
+
+        updateTinyBoard();
+        if (strokes.length === 0) {
+            updateView(blankMsg);
+        }
+
+        doRecognition();
+        log();
+    }
+
+    function onNavigationForward() {
+        onBoardStopDrawing();
+    }
+
+    function doRecognition() {
+        function done() {
+            var bigPic = myCanvas.toDataURL();
+            bigPic = bigPic.replace('data:image/png;base64,', '');
+
+            var imgData = {
+                strokes: JSON.stringify(strokes),
+                bigPic: bigPic
+            };
+
+            $.ajax({
+                url: '/recognize',
+                type: 'POST',
+                data: imgData,
+                success: updateView
+            });
+        }
+
+        if (strokes.length === 0) return;
+
+/*        var obCanvas = createCanvas(32, 32);
+        var myCanvas = obCanvas.canvas;
+        var myCanvasCtx = obCanvas.ctx;*/
+
+        var img1 = blankDataURLBigPic;
+        var img2 = customBoard.history.stack[customBoard.history.position];
+        diffImageOnCanvas(myCanvasCtx, img1, img2, done);
+    }
+
+    function updateView(msg) {
+        document.getElementById('pred1_result').src = msg.pred1_image;
+        document.getElementById('pred2_result').src = msg.pred2_image;
+        document.getElementById('pred3_result').src = msg.pred3_image;
+        document.getElementById('pred1_accuracy').innerHTML = '可能性(Prob.): ' + msg.pred1_accuracy;
+        document.getElementById('pred2_accuracy').innerHTML = '可能性(Prob.): ' + msg.pred2_accuracy;
+        document.getElementById('pred3_accuracy').innerHTML = '可能性(Prob.): ' + msg.pred3_accuracy;
+    }
+
+    function updateTinyBoard() {
+        var img = new Image();
+
+        //var oldGCO = tinyCtx.globalCompositeOperation;
+        img.onload = function() {
+            tinyCtx.clearRect(0, 0, tinyCtx.canvas.width, tinyCtx.canvas.height);
+            tinyCtx.globalCompositeOperation = "source-over";
+            tinyCtx.drawImage(img, 0, 0, tinyCtx.canvas.width, tinyCtx.canvas.height);
+            //tinyCtx.globalCompositeOperation = oldGCO;
+        };
+        img.src = customBoard.history.stack[customBoard.history.position];
+    }
+
+    function createCanvas(width, height) {
+        var canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+
+        var ctx = canvas.getContext("2d");
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, width, height);
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.imageSmoothingEnabled = true;
+        ctx.globalAlpha = 1.0;
+
+        return {canvas: canvas, ctx: ctx};
+    }
+
+    function diffImageOnCanvas(ctx, image1, image2, oncomplete) {
+        function compositeImage(img, op) {
+                return function() {
+                    ctx.globalCompositeOperation = op;
+                    ctx.drawImage(img, 0, 0, ctx.canvas.width, ctx.canvas.height);
+                    //ctx.restore();
+
+                    if (oncomplete) {
+                        oncomplete();
+                    }
+                };
+        }
+
+        //ctx.save();
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+        var img = new Image();
+        var img2 = new Image();
+
+        img.onload = function() {
+            ctx.globalCompositeOperation = "source-over";
+            ctx.drawImage(img, 0, 0, ctx.canvas.width, ctx.canvas.height);
+
+            img2.onload = compositeImage(img2, "difference");
+            img2.src = image2;
+        };
+        img.src = image1;
+    }
+</script>
+
+</body>
+</html>

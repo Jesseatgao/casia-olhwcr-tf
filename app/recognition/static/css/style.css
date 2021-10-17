@@ -1,0 +1,95 @@
+html, body {
+	height: 100%;
+}
+body {
+	font-family: Consolas;
+	background-color: #222222;
+	background: rgb(60,100,140); /* Old browsers */
+	background: -moz-radial-gradient(center, ellipse cover,  rgba(60,100,140,1) 0%, rgba(20,20,20,1) 100%); /* FF3.6+ */
+	background: -webkit-gradient(radial, center center, 0px, center center, 100%, color-stop(0%,rgba(60,100,140,1)), color-stop(100%,rgba(20,20,20,1))); /* Chrome,Safari4+ */
+	background: -webkit-radial-gradient(center, ellipse cover,  rgba(60,100,140,1) 0%,rgba(20,20,20,1) 100%); /* Chrome10+,Safari5.1+ */
+	background: -o-radial-gradient(center, ellipse cover,  rgba(60,100,140,1) 0%,rgba(20,20,20,1) 100%); /* Opera 12+ */
+	background: -ms-radial-gradient(center, ellipse cover,  rgba(60,100,140,1) 0%,rgba(20,20,20,1) 100%); /* IE10+ */
+	background: radial-gradient(ellipse at center,  rgba(60,100,140,1) 0%,rgba(20,20,20,1) 100%); /* W3C */
+	margin: 0;
+	overflow: hidden;
+}
+#canvasContainer {
+	z-index: 50;
+	opacity: 0.8;
+	width:332px;
+	position:relative;
+	margin:0 auto;
+	-webkit-transition: opacity 0.5s ease;
+	-moz-transition: opacity 0.5s ease;
+	-ms-transition: opacity 0.5s ease;
+	-o-transition: opacity 0.5s ease;
+	transition: opacity 0.5s ease;
+}
+#canvasContainer:hover {
+	opacity:1;
+}
+.drawingOutput {
+	display:block;
+}
+.board {
+	width: 322px;
+	height: 391px;
+}
+.tinyBoard {
+	margin: 0.5px auto;
+	background-color: #fff;
+	width: 64px;
+	height: 64px;
+	border: solid thin #ccc;
+	overflow: hidden;
+	float: left;
+	color: white;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+.tinyCanvas {
+	width: 32px;
+	height: 32px;
+	border: solid 1px #c00;
+}
+.instructions {
+	color: #fff;
+	font-size:15px;
+	text-align:center;
+}
+.info {
+	color: #bcd;
+	font-size:15px;
+	text-align:left;
+	float:left;
+	height:37px;
+	width:240px;
+	line-height:30px;
+	margin-right:5px;
+}
+.ans {
+	font-size: 24px;
+	color: #fff;
+	margin: 0 auto;
+	background-color:#fff;
+	width: 64px;
+	height: 64px;
+	border: solid 1px #c00;
+	float:left;
+	text-align:center;
+}
+#drawingInterface {
+	padding: 5px;
+	margin-bottom: 5px;
+	background: rgb(30,35,40);
+
+}
+.row {
+  display: table-row;
+}
+.cell {
+  display: table-cell;
+  vertical-align: middle;
+}

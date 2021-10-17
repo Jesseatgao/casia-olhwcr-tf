@@ -1,8 +1,0 @@
-FROM scratch
-
-# create the empty directories serving as the starting points of the training process
-WORKDIR /ckpts
-WORKDIR /tb_logs
-WORKDIR /backup_n_restore
-
-WORKDIR /
