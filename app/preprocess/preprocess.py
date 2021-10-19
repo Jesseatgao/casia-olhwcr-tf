@@ -348,6 +348,10 @@ def make_dataset_gb2312_level1(dataset_dir, train_pot_dir=None, val_pot_dir=None
         id2hans_pathname = os.path.join(dict_dataset_dir, 'id2hans.pkl')
         dump(id2hans, id2hans_pathname)
 
+        # dump the hans_character-to-id dict
+        hans2id_pathname = os.path.join(dict_dataset_dir, 'hans2id.pkl')
+        dump(hans2id, hans2id_pathname)
+
         # make the id-to-printed_Chinese_character_image dict
         if font:
             # map ID number to PNG image
