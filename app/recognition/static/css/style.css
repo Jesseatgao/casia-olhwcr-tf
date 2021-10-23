@@ -29,19 +29,23 @@ body {
 #canvasContainer:hover {
 	opacity:1;
 }
-.drawingOutput {
-	display:block;
+#drawingInterface {
+	padding: 5px;
+	margin-bottom: 5px;
+	background: rgb(30,35,40);
+
 }
 .board {
 	width: 322px;
 	height: 391px;
 }
+.drawingOutput {
+	display:block;
+}
 .tinyBoard {
-	margin: 0.5px auto;
 	background-color: #fff;
 	width: 64px;
 	height: 64px;
-	border: solid thin #ccc;
 	overflow: hidden;
 	float: left;
 	color: white;
@@ -52,7 +56,12 @@ body {
 .tinyCanvas {
 	width: 32px;
 	height: 32px;
-	border: solid 1px #c00;
+	border: solid 1px red;
+}
+.miniCanvas {
+	width: 15px;
+	height: 15px;
+	border: dotted 0.5px coral;
 }
 .instructions {
 	color: #fff;
@@ -80,16 +89,40 @@ body {
 	float:left;
 	text-align:center;
 }
-#drawingInterface {
-	padding: 5px;
-	margin-bottom: 5px;
-	background: rgb(30,35,40);
 
-}
 .row {
   display: table-row;
 }
 .cell {
   display: table-cell;
   vertical-align: middle;
+}
+.dm1 {
+	width: 64px;
+	height: 16px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+.dm2 {
+	width: 32px;
+	height: 32px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+.dm3 {
+	width: 16px;
+	height: 32px;
+	display: grid;
+}
+.dm23 {
+	width: 64px;
+	height: 32px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+.dm4KeyMizhan2009 {
+	display: grid;
 }

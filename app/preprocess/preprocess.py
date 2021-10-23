@@ -202,7 +202,7 @@ def build_charset_from_train_pots(dirname, charset_size=None):
     return chars
 
 
-def get_hans_png_bytes(hans, font, size=32, bg_color='black', txt_color='white'):
+def get_hans_png_bytes(hans, font, size=32, bg_color='white', txt_color='black'):
     """
 
     Args:

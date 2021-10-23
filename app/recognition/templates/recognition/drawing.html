@@ -19,9 +19,33 @@
         <div class="board" id="custom-board"></div>
         <div class="drawingOutput">
             <div class="row">
-                <div class="info">原始图(Input)：</div>
-                <div class="tinyBoard">
-                    <canvas class="tinyCanvas" id="tiny"></canvas>
+                <div class="info">分总序列拨号图(Inputs)：</div>
+                <div class="tinyBoard row">
+                    <div class="dm1 cell">
+                        <canvas class="miniCanvas" id="mini_0"></canvas>
+                        <canvas class="miniCanvas" id="mini_1"></canvas>
+                        <canvas class="miniCanvas" id="mini_2"></canvas>
+                        <canvas class="miniCanvas" id="mini_3"></canvas>
+                    </div>
+                    <div class="dm23 cell">
+                        <div class="dm3">
+                            <canvas class="miniCanvas" id="mini_11"></canvas>
+                            <canvas class="miniCanvas" id="mini_10"></canvas>
+                        </div>
+                        <div class="dm2">
+                            <canvas class="tinyCanvas" id="tiny"></canvas>
+                        </div>
+                        <div class="dm3">
+                            <canvas class="miniCanvas" id="mini_4"></canvas>
+                            <canvas class="miniCanvas" id="mini_5"></canvas>
+                        </div>
+                    </div>
+                    <div class="dm1 cell">
+                        <canvas class="miniCanvas" id="mini_9"></canvas>
+                        <canvas class="miniCanvas" id="mini_8"></canvas>
+                        <canvas class="miniCanvas" id="mini_7"></canvas>
+                        <canvas class="miniCanvas" id="mini_6"></canvas>
+                    </div>
                 </div>
             </div>
             <div class="row">
@@ -80,35 +104,79 @@
 
     var strokes = [];
 
-    function log() {
-        // console.log(customBoard.history.stack.length, customBoard.history.position);
-        // console.log(customBoard.history.stack[0]);
-        // console.log(customBoard.history.stack[customBoard.history.position]);
+    var MINI_CANVAS_NUM = 12;
+    var miniCanvases = (function(){
+        var ctxs = [];
+        var pos = 0;
 
-        // console.log(strokes.length);
-        // console.log(strokes.at(-1));
+        for (var i=0; i<MINI_CANVAS_NUM; i++) {
+            var ctx = document.getElementById('mini_' + i).getContext('2d');
+            ctxs[i] = ctx;
+        }
+
+        return {ctxs: ctxs, num: MINI_CANVAS_NUM, pos: pos};
+    })();
+
+    function resetMiniCanvas(ctx) {
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     }
+
+    function resetMiniCanvases() {
+        var n = Math.min(miniCanvases.pos, MINI_CANVAS_NUM);
+        for (var i = 0; i < n; i++) {
+            resetMiniCanvas(miniCanvases.ctxs[i]);
+        }
+
+        miniCanvases.pos = 0;
+    }
+
+    function updateMiniCanvasForward(stroke) {
+        if (miniCanvases.pos >= MINI_CANVAS_NUM) {
+            miniCanvases.pos++;
+
+            return;
+        }
+
+        mirrorImageOnCanvas(miniCanvases.ctxs[miniCanvases.pos], stroke);
+        miniCanvases.pos++;
+    }
+
+    function updateMiniCanvasBack() {
+        miniCanvases.pos--;
+
+        if (miniCanvases.pos >= MINI_CANVAS_NUM) return;
+
+        resetMiniCanvas(miniCanvases.ctxs[miniCanvases.pos]);
+    }
+
+    function resetTinyCanvas() {
+        tinyCtx.clearRect(0, 0, tinyCtx.canvas.width, tinyCtx.canvas.height);
+    }
+
+    function updateTinyCanvas(bigPic) {
+        mirrorImageOnCanvas(tinyCtx, bigPic);
+    }
+
 
     function onBoardReset() {
         strokes.length = 0;
 
-        updateTinyBoard();
-        updateView(blankMsg);
-
-        log();
+        resetMiniCanvases();
+        resetTinyCanvas();
+        updatePredictionView(blankMsg);
     }
 
     function onBoardStopDrawing() {
         function done() {
             var stroke = myCanvas.toDataURL();
+
+            updateMiniCanvasForward(stroke);
+
             stroke = stroke.replace('data:image/png;base64,', '');
             strokes.push(stroke);
 
             doRecognition();
-            log();
         }
-
-        updateTinyBoard();
 
 /*        var obCanvas = createCanvas(32, 32);
         var myCanvas = obCanvas.canvas;
@@ -122,13 +190,14 @@
     function onNavigationBack() {
         strokes.pop();
 
-        updateTinyBoard();
         if (strokes.length === 0) {
-            updateView(blankMsg);
+            resetTinyCanvas();
+            updatePredictionView(blankMsg);
         }
 
+        updateMiniCanvasBack();
+
         doRecognition();
-        log();
     }
 
     function onNavigationForward() {
@@ -138,8 +207,10 @@
     function doRecognition() {
         function done() {
             var bigPic = myCanvas.toDataURL();
-            bigPic = bigPic.replace('data:image/png;base64,', '');
 
+            updateTinyCanvas(bigPic);
+
+            bigPic = bigPic.replace('data:image/png;base64,', '');
             var imgData = {
                 strokes: JSON.stringify(strokes),
                 bigPic: bigPic
@@ -149,7 +220,7 @@
                 url: '/recognize',
                 type: 'POST',
                 data: imgData,
-                success: updateView
+                success: updatePredictionView
             });
         }
 
@@ -164,7 +235,7 @@
         diffImageOnCanvas(myCanvasCtx, img1, img2, done);
     }
 
-    function updateView(msg) {
+    function updatePredictionView(msg) {
         document.getElementById('pred1_result').src = msg.pred1_image;
         document.getElementById('pred2_result').src = msg.pred2_image;
         document.getElementById('pred3_result').src = msg.pred3_image;
@@ -173,17 +244,17 @@
         document.getElementById('pred3_accuracy').innerHTML = '可能性(Prob.): ' + msg.pred3_accuracy;
     }
 
-    function updateTinyBoard() {
-        var img = new Image();
+    function mirrorImageOnCanvas(ctx, image) {
+        var im = new Image();
 
-        //var oldGCO = tinyCtx.globalCompositeOperation;
-        img.onload = function() {
-            tinyCtx.clearRect(0, 0, tinyCtx.canvas.width, tinyCtx.canvas.height);
-            tinyCtx.globalCompositeOperation = "source-over";
-            tinyCtx.drawImage(img, 0, 0, tinyCtx.canvas.width, tinyCtx.canvas.height);
-            //tinyCtx.globalCompositeOperation = oldGCO;
+        //var oldGCO = ctx.globalCompositeOperation;
+        im.onload = function() {
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            ctx.globalCompositeOperation = "source-over";
+            ctx.drawImage(im, 0, 0, ctx.canvas.width, ctx.canvas.height);
+            //ctx.globalCompositeOperation = oldGCO;
         };
-        img.src = customBoard.history.stack[customBoard.history.position];
+        im.src = image;
     }
 
     function createCanvas(width, height) {
