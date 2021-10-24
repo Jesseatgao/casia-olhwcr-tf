@@ -86,10 +86,6 @@
 
     var tinyCtx = document.getElementById('tiny').getContext("2d");
 
-    var obCanvas = createCanvas(32, 32);
-    var myCanvas = obCanvas.canvas;
-    var myCanvasCtx = obCanvas.ctx;
-
     var blankDataURLBigPic = createCanvas(320, 320).canvas.toDataURL();
 
     var blankDataURL = createCanvas(64, 64).canvas.toDataURL();
@@ -111,11 +107,16 @@
 
         for (var i=0; i<MINI_CANVAS_NUM; i++) {
             var ctx = document.getElementById('mini_' + i).getContext('2d');
+            // do something with `ctx` here
             ctxs[i] = ctx;
         }
 
         return {ctxs: ctxs, num: MINI_CANVAS_NUM, pos: pos};
     })();
+
+    function isInStartState() {
+        return miniCanvases.pos === 0;
+    }
 
     function resetMiniCanvas(ctx) {
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -178,9 +179,9 @@
             doRecognition();
         }
 
-/*        var obCanvas = createCanvas(32, 32);
+        var obCanvas = createCanvas(32, 32);
         var myCanvas = obCanvas.canvas;
-        var myCanvasCtx = obCanvas.ctx;*/
+        var myCanvasCtx = obCanvas.ctx;
 
         var img1 = customBoard.history.stack[customBoard.history.position - 1];
         var img2 = customBoard.history.stack[customBoard.history.position];
@@ -220,15 +221,19 @@
                 url: '/recognize',
                 type: 'POST',
                 data: imgData,
-                success: updatePredictionView
+                success: function (msg) {
+                    if (isInStartState()) return;  /*fast backward*/
+
+                    updatePredictionView(msg);
+                }
             });
         }
 
         if (strokes.length === 0) return;
 
-/*        var obCanvas = createCanvas(32, 32);
+        var obCanvas = createCanvas(32, 32);
         var myCanvas = obCanvas.canvas;
-        var myCanvasCtx = obCanvas.ctx;*/
+        var myCanvasCtx = obCanvas.ctx;
 
         var img1 = blankDataURLBigPic;
         var img2 = customBoard.history.stack[customBoard.history.position];
