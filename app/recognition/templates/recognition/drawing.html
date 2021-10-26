@@ -115,7 +115,7 @@
     })();
 
     function isInStartState() {
-        return miniCanvases.pos === 0;
+        return strokes.length === 0;
     }
 
     function resetMiniCanvas(ctx) {
@@ -155,6 +155,8 @@
     }
 
     function updateTinyCanvas(bigPic) {
+        if (isInStartState()) return;
+
         mirrorImageOnCanvas(tinyCtx, bigPic);
     }
 
@@ -191,7 +193,7 @@
     function onNavigationBack() {
         strokes.pop();
 
-        if (strokes.length === 0) {
+        if (isInStartState()) {
             resetTinyCanvas();
             updatePredictionView(blankMsg);
         }
@@ -222,14 +224,14 @@
                 type: 'POST',
                 data: imgData,
                 success: function (msg) {
-                    if (isInStartState()) return;  /*fast backward*/
+                    if (isInStartState()) return;  /*fast navigating backwards*/
 
                     updatePredictionView(msg);
                 }
             });
         }
 
-        if (strokes.length === 0) return;
+        if (isInStartState()) return;
 
         var obCanvas = createCanvas(32, 32);
         var myCanvas = obCanvas.canvas;
