@@ -101,7 +101,7 @@ def build_model(training=True):
     return model
 
 
-def make_train_model(checkpoint_dir, tensorboard_dir, backup_dir):
+def make_train_model(checkpoint_dir, tensorboard_dir, backup_dir, patience=20):
 
     def _setup_log_dirs():
         for d in [checkpoint_dir, tensorboard_dir, backup_dir]:
@@ -139,7 +139,7 @@ def make_train_model(checkpoint_dir, tensorboard_dir, backup_dir):
                                                      embeddings_freq=0, update_freq='epoch')
 
         earlystop_cb = keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=1e-2,
-                                                     patience=5, verbose=0)
+                                                     patience=patience, verbose=0)
 
         backup_cb = keras.callbacks.experimental.BackupAndRestore(backup_dir=backup_dir)
 
@@ -178,7 +178,9 @@ if __name__ == "__main__":
                             help='directory in which to save the tensorboard logs; relative to `working_dir`')
         parser.add_argument('-R', '--backup-dir', default='backup_n_restore', dest='backup_dir',
                             help='directory in which to save the BackupAndRestore logs; relative to `working_dir`')
-        parser.add_argument('-E', '--epochs', default=100, dest='epochs', type=int,
+        parser.add_argument('-P', '--patience', default=20, dest='patience', type=int,
+                            help='number of epochs with no improvement after which training will be stopped')
+        parser.add_argument('-E', '--epochs', default=1000, dest='epochs', type=int,
                             help='epochs to run for training, though early stopping may occur')
         parser.add_argument('-B', '--batch-size', default=32, dest='batch_size', type=int,
                             help='mini batch size for training the model')
@@ -201,6 +203,7 @@ if __name__ == "__main__":
     tensorboard_dir = os.path.join(working_dir, args.tensorboard_dir)
     backup_dir = os.path.join(working_dir, args.backup_dir)
 
+    patience = args.patience
     epochs = args.epochs
     batch_size = args.batch_size
     shuffle_size = args.shuffle_size
@@ -212,7 +215,8 @@ if __name__ == "__main__":
 
     model, callbacks = make_train_model(checkpoint_dir=checkpoint_dir,
                                         tensorboard_dir=tensorboard_dir,
-                                        backup_dir=backup_dir)
+                                        backup_dir=backup_dir,
+                                        patience=patience)
 
     # collect the state of the datasets automatically
     model._train_dataset = train_dataset
