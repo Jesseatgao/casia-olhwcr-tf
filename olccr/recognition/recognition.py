@@ -8,7 +8,7 @@ from PIL import Image
 import numpy as np
 import tensorflow as tf
 
-from app.training.model import build_model
+from olccr.training.model import build_model
 
 
 recognition_bp = Blueprint('recognition_bp', __name__, template_folder='templates', static_folder='static',

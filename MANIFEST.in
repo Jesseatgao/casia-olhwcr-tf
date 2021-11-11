@@ -1,0 +1,7 @@
+graft olccr
+graft docs
+graft third_parties
+
+include requirements.txt
+
+global-exclude *.py[cod] __pycache__

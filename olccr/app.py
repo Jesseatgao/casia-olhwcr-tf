@@ -1,6 +1,6 @@
 from flask import Flask
 
-from recognition.recognition import recognition_bp
+from .recognition.recognition import recognition_bp
 
 
 app = Flask(__name__)
