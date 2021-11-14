@@ -14,30 +14,30 @@ def _arg_parser():
     parser = ArgumentParser()
 
     parser.add_argument('-d', '--working-dir', default=default_working_dir, dest='working_dir',
-                        help='working directory in which to save all the related files')
+                        help='working directory in which to save all the related files [default: olccr/data]')
     parser.add_argument('-t', '--train-dataset-dir', default='dataset/training', dest='train_dataset_dir',
                         help='directory containing the training data files in pickle format; '
-                             'relative to `working_dir`')
+                             'relative to `working_dir`. [default: dataset/training]')
     parser.add_argument('-v', '--validation-dataset-dir', default='dataset/validation', dest='val_dataset_dir',
                         help='directory containing the validation data files in pickle format; '
-                             'relative to `working_dir`')
+                             'relative to `working_dir`. [default: dataset/validation]')
 
     parser.add_argument('-C', '--checkpoint-dir', default='ckpts', dest='checkpoint_dir',
-                        help='directory in which to save the model checkpoints; relative to `working_dir`')
+                        help='directory in which to save the model checkpoints; relative to `working_dir`. [default: ckpts]')
     parser.add_argument('-T', '--tensorboard-dir', default='tb_logs', dest='tensorboard_dir',
-                        help='directory in which to save the tensorboard logs; relative to `working_dir`')
+                        help='directory in which to save the tensorboard logs; relative to `working_dir`. [default: tb_logs]')
     parser.add_argument('-R', '--backup-dir', default='backup_n_restore', dest='backup_dir',
-                        help='directory in which to save the BackupAndRestore logs; relative to `working_dir`')
+                        help='directory in which to save the BackupAndRestore logs; relative to `working_dir`. [default: backup_n_restore]')
     parser.add_argument('-P', '--patience', default=20, dest='patience', type=int,
-                        help='number of epochs with no improvement after which training will be stopped')
+                        help='number of epochs with no improvement after which training will be stopped [default: 20]')
     parser.add_argument('-E', '--epochs', default=1000, dest='epochs', type=int,
-                        help='epochs to run for training, though early stopping may occur')
+                        help='epochs to run for training, though early stopping may occur [default: 1000]')
     parser.add_argument('-B', '--batch-size', default=32, dest='batch_size', type=int,
-                        help='mini batch size for training the model')
+                        help='mini batch size for training the model [default: 32]')
     parser.add_argument('-S', '--shuffle-buffer-size', default=1200, dest='shuffle_size', type=int,
-                        help='buffer size for shuffling the training elements using two-level shuffling')
+                        help='buffer size for shuffling the training elements using two-level shuffling [default: 1200]')
     parser.add_argument('-V', '--verbose', default=2, dest='verbose', type=int, choices=[0, 1, 2],
-                        help='verbosity mode. 0 = silent, 1 = progress bar, 2 = one line per epoch')
+                        help='verbosity mode. 0 = silent, 1 = progress bar, 2 = one line per epoch [default: 2]')
 
     return parser
 

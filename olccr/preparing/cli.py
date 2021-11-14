@@ -15,13 +15,13 @@ def _arg_parser():
     parser = ArgumentParser()
 
     parser.add_argument('-d', '--working-dir', default=default_working_dir, dest='working_dir',
-                        help='working directory in which to save all the related files')
+                        help='working directory in which to save all the related files [default: olccr/data]')
     parser.add_argument('-t', '--train-pot-dir', default='train_pot', dest='train_pot_dir',
                         help='directory containing the training POT files; relative to `working_dir`. '
                              'if not given, it will default to `train_pot`')
     parser.add_argument('-v', '--validation-pot-dir', default='val_pot', dest='val_pot_dir',
                         help='directory containing the validation POT files; relative to `working_dir`. '
-                             'if not given, it will default to `{val_pot}`')
+                             'if not given, it will default to `val_pot`')
 
     return parser
 

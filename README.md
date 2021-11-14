@@ -6,20 +6,58 @@ Online handwriting Chinese character recognition using Tensorflow 2, Keras & Fla
 
 ![screenshots](https://raw.githubusercontent.com/Jesseatgao/casia-olhwcr-tf/conv_with_blstm/docs/recognition.gif)
 
+### Installation
+
+* from within source directory locally
+
+    `pip install .`
+
 ### USAGE
 
 >**:envelope:**\
-> The model restored from the pre-saved checkpoint (located in 'app/recognition/conf/checkpoint/weights.hdf5')
+> The model restored from the pre-saved checkpoint (located in 'olccr/recognition/conf/checkpoint/weights.hdf5')
 > is not fully trained, and its hyperparameters are not tuned. The app above
 > is just for demonstrating the idea. Further training and experimentation should be done.
 
-#### Preparing raw data
+#### Running recognition App
 
-#### Making dataset
+From the Bash/CMD shell execute the following command, then visit http://127.0.0.1:5000/:
 
-#### Training model
+```shell
+(ENV)$ olccr
+```
 
-#### Running recognition app
+#### Re-training model
+
+* Preparing raw data
+
+Run the following command to unzip and patch the raw data:
+
+```shell
+(ENV)$ olccr_prepare
+```
+
+* Making dataset
+
+To generate the training and validation dataset, simply run:
+
+```shell
+(ENV)$ olccr_preprocess -t -v
+```
+
+* Training model
+
+Run or re-run after interruption the following command to train or resume training the network, respectively
+
+```shell
+(ENV)$ olccr_train -V 1
+```
+
+#### Installing trained weights 
+
+With default setup, for example, the checkpointed weights should be saved as `olccr/data/ckpts/weights.hdf5`. To apply
+the latest weights, copy it to the App's recognition configuration directory `olccr/recognition/conf/checkpoint/` 
+replacing the same name file, then restart the App.
 
 ### REFERENCES
 

@@ -14,7 +14,7 @@ def _arg_parser():
     parser = ArgumentParser()
 
     parser.add_argument('-d', '--working-dir', default=default_working_dir, dest='working_dir',
-                        help='working directory in which to save all the related files')
+                        help='working directory in which to save all the related files [default: olccr/data]')
     parser.add_argument('-t', '--train-pot-dir', default=None, dest='train_pot_dir', nargs='?', const='train_pot',
                         help='directory containing the training POT files; relative to `working_dir`. '
                              'if not given, it will default to `None`; with no argument followed, '
@@ -27,12 +27,12 @@ def _arg_parser():
                         help='true type font file used to generate the standard Chinese character images, '
                              'e.g. /absolute/path/to/simhei.ttf')
     parser.add_argument('-B', '--pot-batch', default=10, dest='pot_batch', type=int,
-                        help='number of POT files combined to produce one of the training datasets')
+                        help='number of POT files combined to produce one of the training datasets [default: 10]')
     parser.add_argument('-S', '--image-size', default=32, dest='img_size', type=int,
-                        help='size of the training/validation sample image and/or the Chinese character font image')
+                        help='size of the training/validation sample image and/or the Chinese character font image [default: 32]')
     parser.add_argument('-D', '--dataset-dir', default='dataset', dest='dataset_dir',
                         help='directory in which to save the generated training and test dataset in pickle format; '
-                             'relative to `working_dir`')
+                             'relative to `working_dir`. if not provided, it will take a default value of `dataset`')
 
     return parser
 
