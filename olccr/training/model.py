@@ -1,11 +1,19 @@
 import os
+import sys
 import glob
 import pickle
 from functools import partial
 
 import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import layers, losses, optimizers
+
+assert sys.version_info.major == 3
+if sys.version_info.minor < 12:
+    from tensorflow import keras
+    from tensorflow.keras import layers, losses, optimizers
+else:
+    os.environ["TF_USE_LEGACY_KERAS"] = "1"
+    import tf_keras as keras
+    from tf_keras import layers, losses, optimizers
 
 
 def load_data_from_disk(files, shuffle=True, files_shuffle_size=None):

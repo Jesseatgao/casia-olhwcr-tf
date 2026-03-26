@@ -8,6 +8,10 @@ Online handwriting Chinese character recognition using Tensorflow 2, Keras & Fla
 
 ### INSTALLATION
 
+* from within the Python virtual environment, run
+
+    `python -m pip install --upgrade pip`
+
 * from within source directory locally
 
     `pip install .`
